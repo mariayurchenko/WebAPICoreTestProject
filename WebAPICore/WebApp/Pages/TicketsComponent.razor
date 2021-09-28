@@ -1,0 +1,93 @@
+﻿@page "/projects/{projectId:int}/tickets"
+
+@inject NavigationManager _navigationManager
+@inject ITicketsScreenUseCases _ticketsScreenUseCases
+
+@attribute [Authorize]
+
+<h3>Tickets</h3>
+<br />
+
+<div class="row">
+    <div class="col-auto">
+        <input type="text" class="form-control" @bind-value="_searchFilter" />
+    </div>
+    <div class="col-auto">
+        <button type="button" class="btn btn-light" @onclick="OnSearch">Search</button>
+    </div>
+    <div class="col-auto">
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" id="myticket" @bind-value="ViewMyTickets" />
+            <label class="form-check-label" for="myticket">View My Tickets</label>
+        </div>
+    </div>
+</div>
+<br />
+
+@if (_tickets != null)
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Owner</th>
+                <th>Report Date</th>
+                <th>Due Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var ticket in _tickets)
+            {
+                <TicketRowComponent Ticket="ticket"></TicketRowComponent>
+
+            }
+        </tbody>
+    </table>
+    <button class="btn btn-primary" @onclick="AddTicket">AddTicket</button>
+
+}
+
+
+@code {
+
+    IEnumerable<Ticket> _tickets;
+    string _searchFilter;
+
+    [Parameter]
+    public int ProjectId { get; set; }
+
+    bool _viewMyTickets = false;
+    public bool ViewMyTickets
+    {
+        get => _viewMyTickets;
+        set
+        {
+            _viewMyTickets = value;
+
+            Task.Run(async () =>
+            {
+                if (_viewMyTickets)
+                    _tickets = await _ticketsScreenUseCases.ViewOwnersTickets(ProjectId, "Maria Yurchenko");
+                else
+                    _tickets = await _ticketsScreenUseCases.ViewTickets(ProjectId);
+
+                StateHasChanged();
+            });
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _tickets = await _ticketsScreenUseCases.ViewTickets(ProjectId);
+    }
+
+    private async Task OnSearch()
+    {
+        _tickets = await _ticketsScreenUseCases.SearchTickets(_searchFilter);
+    }
+
+    private void AddTicket()
+    {
+        _navigationManager.NavigateTo($"/projects/{ProjectId}/addticket");
+    }
+}
